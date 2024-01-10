@@ -16,12 +16,12 @@
 | Technology | Purpose |
 |------------|---------|
 | <img src="https://www.datocms-assets.com/75941/1657707878-nextjs_logo.png" alt="Next.js Logo" height="20" width="20"/> [Next.js](https://nextjs.org/) | React framework for building web applications |
-| <img src="https://d33wubrfki0l68.cloudfront.net/b67a1a34a699643618fc78c29f0e6d6c61525714/949a9/docs/icons/logo-react-icon.png" alt="Next.js Logo" height="20" width="20"/> [React](https://reactjs.org/) | JavaScript library for building user interfaces |
-| <img src="https://files.raycast.com/nwt9ncojkvwmjfkaada8upafvpnu" alt="Next.js Logo" height="20" width="20"/> [Tailwind CSS](https://tailwindcss.com/) | Utility-first CSS framework for styling |
+| <img src="https://d33wubrfki0l68.cloudfront.net/b67a1a34a699643618fc78c29f0e6d6c61525714/949a9/docs/icons/logo-react-icon.png" alt="React.js Logo" height="20" width="20"/> [React](https://reactjs.org/) | JavaScript library for building user interfaces |
+| <img src="https://files.raycast.com/nwt9ncojkvwmjfkaada8upafvpnu" alt="Tailwind CSS Logo" height="20" width="20"/> [Tailwind CSS](https://tailwindcss.com/) | Utility-first CSS framework for styling |
 | <img src="https://raw.githubusercontent.com/nextui-org/nextui/main/apps/docs/public/isotipo.png" alt="NextUI Logo" height="20" width="20"/> [NextUI](https://nextui.org/) | UI library for Tailwind CSS with theming support |
-| <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/MetaMask_Fox.svg/2048px-MetaMask_Fox.svg.png" alt="Next.js Logo" height="20" width="20"/> [MetaMask](https://metamask.io/) | Ethereum wallet for secure and anonymous authentication |
-| <img src="https://next-auth.js.org/img/logo/logo-sm.png" alt="Next.js Logo" height="20" width="20"/> [NextAuth](https://next-auth.js.org/) | Authentication library for Next.js applications |
-| <img src="https://api.nuget.org/v3-flatcontainer/moralis/1.0.4.6/icon" alt="Next.js Logo" height="20" width="20"/> [Moralis](https://moralis.io/) | Decentralized backend infrastructure for blockchain applications |
+| <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/MetaMask_Fox.svg/2048px-MetaMask_Fox.svg.png" alt="MetaMask Logo" height="20" width="20"/> [MetaMask](https://metamask.io/) | Ethereum wallet for secure and anonymous authentication |
+| <img src="https://next-auth.js.org/img/logo/logo-sm.png" alt="NextAuth Logo" height="20" width="20"/> [NextAuth](https://next-auth.js.org/) | Authentication library for Next.js applications |
+| <img src="https://seeklogo.com/images/M/moralis-logo-C63CBD2852-seeklogo.com.png" alt="Moralis Logo" height="20" width="20"/> [Moralis](https://moralis.io/) | Decentralized backend infrastructure for blockchain applications |
 
 ## Contribution Guidelines
 
