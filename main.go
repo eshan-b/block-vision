@@ -1,3 +1,4 @@
+// main.go
 package main
 
 import (
@@ -6,43 +7,59 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucasb-eyer/go-colorful"
 )
 
-// Define gradient colors and styles
+type ViewMode int
+
+const (
+	MenuView ViewMode = iota
+	TrendingView
+)
+
+type model struct {
+	viewMode   ViewMode
+	menuChoice int
+	keys       keyMap
+	help       help.Model
+	table      table.Model
+	err        error
+}
+
 var (
 	gradientStart, _ = colorful.Hex("#F096DD")
 	gradientEnd, _   = colorful.Hex("#BC52F1")
 	subtextColor     = lipgloss.Color("#F095DD")
 	checkboxColor    = lipgloss.Color("#FFFFFF")
 	checkboxChecked  = lipgloss.Color("#BC52F1")
+	baseStyle        = lipgloss.NewStyle().
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("240"))
 )
 
-// keyMap defines keybindings for navigation and actions
 type keyMap struct {
 	Up     key.Binding
 	Down   key.Binding
 	Select key.Binding
 	Help   key.Binding
 	Quit   key.Binding
+	Back   key.Binding
 }
 
-// ShortHelp returns keybindings to be shown in the compact help view
 func (k keyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Help, k.Quit}
 }
 
-// FullHelp returns keybindings to be shown in the expanded help view
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down},             // First column
-		{k.Select, k.Help, k.Quit}, // Second column
+		{k.Up, k.Down},
+		{k.Select, k.Help, k.Back, k.Quit},
 	}
 }
 
-// Initialize keybindings
 var keys = keyMap{
 	Up: key.NewBinding(
 		key.WithKeys("up", "k"),
@@ -54,23 +71,20 @@ var keys = keyMap{
 	),
 	Select: key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("enter", "select option"),
+		key.WithHelp("enter", "select"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),
 		key.WithHelp("?", "toggle help"),
 	),
+	Back: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "back"),
+	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "esc", "ctrl+c"),
+		key.WithKeys("q", "ctrl+c"),
 		key.WithHelp("q", "quit"),
 	),
-}
-
-// Model for the Bubble Tea program
-type model struct {
-	Choice int // Store selected choice (0 or 1)
-	keys   keyMap
-	help   help.Model
 }
 
 func (m model) Init() tea.Cmd {
@@ -83,39 +97,77 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
-		case key.Matches(msg, m.keys.Up):
-			m.Choice--
-			if m.Choice < 0 {
-				m.Choice = 0
+		case key.Matches(msg, m.keys.Back):
+			if m.viewMode != MenuView {
+				m.viewMode = MenuView
+				return m, nil
 			}
-		case key.Matches(msg, m.keys.Down):
-			m.Choice++
-			if m.Choice > 1 {
-				m.Choice = 1
-			}
-		case key.Matches(msg, m.keys.Help):
-			m.help.ShowAll = !m.help.ShowAll
 		}
+
+		switch m.viewMode {
+		case MenuView:
+			return m.updateMenu(msg)
+		case TrendingView:
+			return m.updateTrending(msg)
+		}
+	case errMsg:
+		m.err = msg.err
+		return m, nil
+	case trendingDataMsg:
+		m.table.SetRows(msg.rows)
+		return m, nil
 	}
 	return m, nil
 }
 
-func (m model) View() string {
-	// Gradient title
-	title := gradientText("❒ block-vision", gradientStart, gradientEnd)
+func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keys.Up):
+		m.menuChoice--
+		if m.menuChoice < 0 {
+			m.menuChoice = 0
+		}
+	case key.Matches(msg, m.keys.Down):
+		m.menuChoice++
+		if m.menuChoice > 1 {
+			m.menuChoice = 1
+		}
+	case key.Matches(msg, m.keys.Select):
+		if m.menuChoice == 0 {
+			m.viewMode = TrendingView
+			return m, fetchTrendingCmd
+		}
+	case key.Matches(msg, m.keys.Help):
+		m.help.ShowAll = !m.help.ShowAll
+	}
+	return m, nil
+}
 
-	// Subtitle
+func (m model) updateTrending(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.table, cmd = m.table.Update(msg)
+	return m, cmd
+}
+
+func (m model) View() string {
+	switch m.viewMode {
+	case MenuView:
+		return m.menuView()
+	case TrendingView:
+		return m.trendingView()
+	default:
+		return "Unknown view"
+	}
+}
+
+func (m model) menuView() string {
+	title := gradientText("❒ block-vision", gradientStart, gradientEnd)
 	subtext := lipgloss.NewStyle().
 		Foreground(subtextColor).
 		Render("• v1.0.0  ✦︎ Lighting up your crypto journey ✦︎")
-
-	// Checkbox options
-	checkboxOptions := checkboxPicker([]string{"Trending", "Search"}, m.Choice)
-
-	// Help view
+	checkboxOptions := checkboxPicker([]string{"Trending", "Search"}, m.menuChoice)
 	helpView := m.help.View(m.keys)
 
-	// Combine all parts with additional newlines
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		title,
@@ -127,7 +179,31 @@ func (m model) View() string {
 	)
 }
 
-// Helper to create gradient text
+func (m model) trendingView() string {
+	if m.err != nil {
+		return fmt.Sprintf("Error: %v", m.err)
+	}
+	return baseStyle.Render(m.table.View()) + "\n"
+}
+
+// Message types for handling trending data
+type trendingDataMsg struct {
+	rows []table.Row
+}
+
+type errMsg struct {
+	err error
+}
+
+func fetchTrendingCmd() tea.Msg {
+	rows, err := fetchTrendingCryptos()
+	if err != nil {
+		return errMsg{err}
+	}
+	return trendingDataMsg{rows}
+}
+
+// Helper functions
 func gradientText(text string, start, end colorful.Color) string {
 	gradient := make([]string, len(text))
 	for i, char := range text {
@@ -138,25 +214,30 @@ func gradientText(text string, start, end colorful.Color) string {
 	return lipgloss.JoinHorizontal(lipgloss.Left, gradient...)
 }
 
-// Create the checkbox options
 func checkboxPicker(options []string, choice int) string {
 	var renderedOptions []string
 	for i, option := range options {
-		// Determine if the option is selected
 		checked := "[ ]"
 		if i == choice {
 			checked = fmt.Sprintf("[%s]", lipgloss.NewStyle().Foreground(checkboxChecked).Render("x"))
 		}
-
-		// Style the option
 		optionText := lipgloss.NewStyle().Foreground(checkboxColor).Render(option)
 		renderedOptions = append(renderedOptions, fmt.Sprintf("%s %s", checked, optionText))
 	}
 	return lipgloss.JoinVertical(lipgloss.Left, renderedOptions...)
 }
 
+func initialModel() model {
+	return model{
+		viewMode: MenuView,
+		keys:     keys,
+		help:     help.New(),
+		table:    InitializeTrendingTable(),
+	}
+}
+
 func main() {
-	p := tea.NewProgram(model{keys: keys, help: help.New()}, tea.WithAltScreen())
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running program: %v\n", err)
 		os.Exit(1)
