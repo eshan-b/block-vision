@@ -144,9 +144,16 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) updateTrending(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	m.table, cmd = m.table.Update(msg)
-	return m, cmd
+	switch {
+	case key.Matches(msg, m.keys.Help):
+		m.help.ShowAll = !m.help.ShowAll
+		return m, nil
+	case key.Matches(msg, m.keys.Up), key.Matches(msg, m.keys.Down):
+		var cmd tea.Cmd
+		m.table, cmd = m.table.Update(msg)
+		return m, cmd
+	}
+	return m, nil
 }
 
 func (m model) View() string {
@@ -183,7 +190,15 @@ func (m model) trendingView() string {
 	if m.err != nil {
 		return fmt.Sprintf("Error: %v", m.err)
 	}
-	return baseStyle.Render(m.table.View()) + "\n"
+
+	// Combine the table view with the help view
+	helpView := m.help.View(m.keys)
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		baseStyle.Render(m.table.View()),
+		"", // Add a blank line between table and help
+		helpView,
+	)
 }
 
 // Message types for handling trending data
