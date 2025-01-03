@@ -32,7 +32,7 @@ This is just the beginning! **block-vision** has a lot of room to grow and evolv
 
 - [x] View trending cryptocurrencies
 - [ ] Search cryptocurrencies and view info
-- [ ] View portfolio w/ Metamask sign-in
+- [ ] View portfolio with Metamask sign-in
 
 ## Technologies Used
 
