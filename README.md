@@ -8,6 +8,24 @@
 
 ![App Showcase](.github/demo.gif)
 
+## How to Run
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/block-vision.git
+   cd block-vision
+   ```
+2. Run the executable from your terminal:
+   ```bash
+   ./block-vision.exe
+   ```
+> [!NOTE]
+> If you modify the source code, you have to rebuild the executable:
+> ```bash
+> go mod tidy
+> go build .
+> ```
+
 ## Roadmap
 
 This is just the beginning! **block-vision** has a lot of room to grow and evolve.
