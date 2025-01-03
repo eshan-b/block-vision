@@ -37,7 +37,7 @@ This is just the beginning! **block-vision** has a lot of room to grow and evolv
 
 | Technology    | Purpose                                       |
 |---------------|-----------------------------------------------|
-| [Bubble Tea](https://github.com/charmbracelet/bubbletea)    | MVC framework for building terminal UIs      |
+| [Bubble Tea](https://github.com/charmbracelet/bubbletea)    | MVU framework for building terminal UIs      |
 | [Lipgloss](https://github.com/charmbracelet/lipgloss)       | Styling for text and colors in the terminal   |
 | [Bubbles](https://github.com/charmbracelet/bubbles)         | Component library for terminal UIs         |
 | [CoinGecko API](https://www.coingecko.com/en/api)           | Fetches real-time cryptocurrency data        |
