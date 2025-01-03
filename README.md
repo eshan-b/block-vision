@@ -12,7 +12,7 @@
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/block-vision.git
+   git clone https://github.com/eshan-b/block-vision.git
    cd block-vision
    ```
 2. Run the executable from your terminal:
