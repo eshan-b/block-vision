@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Represents the structure of the response from the crypto API
 type TrendingResponse struct {
 	Coins []struct {
 		Item struct {
@@ -28,8 +29,9 @@ type TrendingResponse struct {
 	} `json:"coins"`
 }
 
-// InitializeTrendingTable creates and returns a configured table model
+// Creates a configured table model
 func InitializeTrendingTable() table.Model {
+	// Define table columns
 	columns := []table.Column{
 		{Title: "Rank", Width: 4},
 		{Title: "Coin", Width: 20},
@@ -38,13 +40,14 @@ func InitializeTrendingTable() table.Model {
 		{Title: "24h Change (USD)", Width: 20},
 	}
 
+	// Initialize table with columns and styles
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithFocused(true),
 		table.WithHeight(7),
 	)
 
-	// Set table styles
+	// Define table styles
 	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
@@ -60,39 +63,51 @@ func InitializeTrendingTable() table.Model {
 	return t
 }
 
+// Retrieve and process trending cryptocurrency data
 func fetchTrendingCryptos() ([]table.Row, error) {
+	// Make a GET request to the trending API
 	resp, err := http.Get("https://api.coingecko.com/api/v3/search/trending")
+
+	// Display error message if present
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch trending data: %v", err)
 	}
 	defer resp.Body.Close()
 
+	// Check for non-OK HTTP status
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("received non-OK response: %s", resp.Status)
 	}
 
+	// Read the response body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 
+	// Unmarshal JSON into the trending data structure
 	var trendingData TrendingResponse
 	if err := json.Unmarshal(body, &trendingData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
 	}
 
+	// Prepare table rows with processed data
 	var rows []table.Row
 	for _, coin := range trendingData.Coins {
 		priceChange := coin.Item.Data.PriceChange24h["usd"]
+
+		// Determine color based on price change direction
 		var priceChangeColor lipgloss.Color
 		if priceChange > 0 {
-			priceChangeColor = lipgloss.Color("2") // Green for positive change
+			priceChangeColor = lipgloss.Color("2") // green for positive change
 		} else {
-			priceChangeColor = lipgloss.Color("1") // Red for negative change
+			priceChangeColor = lipgloss.Color("1") // red for negative change
 		}
 
+		// Style the price change value
 		priceChangeStyled := lipgloss.NewStyle().Foreground(priceChangeColor).Render(fmt.Sprintf("%.2f%%", priceChange))
 
+		// Append formatted row
 		rows = append(rows, table.Row{
 			fmt.Sprintf("%d", coin.Item.MarketCapRank),
 			coin.Item.Name,
