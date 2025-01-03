@@ -1,6 +1,6 @@
-<img src=".github/logo.svg" alt="block-vision Logo" width="350">
-
-<br>
+<div style="margin-bottom: 15px;">
+  <img src=".github/logo.svg" alt="block-vision Logo" width="350">
+</div>
 
 **block-vision** is a sleek terminal-based interface for real-time cryptocurrency prices, powered by the CoinMarketCap API. Built with Go, it's perfect for crypto enthusiasts who love working from the command line.
 
@@ -27,7 +27,7 @@ This is just the beginning! **block-vision** has a lot of room to grow and evolv
 
 ## Contributing
 
-Contributions are welcome! Feel free to open an issue or submit a pull request to improve block-vision.
+Contributions are welcome! Feel free to open an issue or submit a pull request.
 
 ## License
 
