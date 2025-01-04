@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dustin/go-humanize"
 	"github.com/lucasb-eyer/go-colorful"
 )
 
@@ -29,16 +30,16 @@ const (
 
 // The main application model holds the state of the program
 type model struct {
-	viewMode    ViewMode    // current view mode
-	menuChoice  int         // selected option in the menu
-	keys        keyMap      // key bindings
-	help        help.Model  // help menu model
-	table       table.Model // table to display data
-	err         error       // error tracking for data operations
-	textInput   textinput.Model
-	list        list.Model
-	selected    Coin
-	coinDetails CoinDetails
+	viewMode    ViewMode        // current view mode
+	menuChoice  int             // selected option in the menu
+	keys        keyMap          // key bindings
+	help        help.Model      // help menu model
+	table       table.Model     // table to display data
+	err         error           // error tracking for data operations
+	textInput   textinput.Model // input for search
+	list        list.Model      // list for displaying search results
+	selected    Coin            // currently selected result
+	coinDetails CoinDetails     // detailed info of selected result
 }
 
 // Color definitions for gradients and UI elements
@@ -46,6 +47,7 @@ var (
 	gradientStart, _ = colorful.Hex("#F096DD")   // start color of the gradient
 	gradientEnd, _   = colorful.Hex("#BC52F1")   // end color of the gradient
 	subtextColor     = lipgloss.Color("#F095DD") // subtext color
+	subtleColor      = lipgloss.Color("#898989") // subtle color
 	checkboxColor    = lipgloss.Color("#FFFFFF") // checkbox outline color
 	checkboxChecked  = lipgloss.Color("#BC52F1") // checkbox checked color
 	baseStyle        = lipgloss.NewStyle().      // base style for table rendering
@@ -326,15 +328,29 @@ func (m model) viewingListView() string {
 
 // Viewing info view rendering logic
 func (m model) viewingInfoView() string {
+	// Parse and format price
 	price := m.coinDetails.MarketData.CurrentPrice["usd"]
-	return fmt.Sprintf(
-		"%s (%s)\n\n• $%.2f\n• Sentiment: %.2f%% ↑ | %.2f%% ↓\n• Learn More ↗: %s\n\n(Press Esc to go back)",
-		m.coinDetails.Name,
-		strings.ToUpper(m.coinDetails.Symbol),
-		price,
-		m.coinDetails.SentimentVotesUpPercentage,
-		m.coinDetails.SentimentVotesDownPercentage,
-		m.coinDetails.Links.Whitepaper,
+	priceFormatted := humanize.Commaf(price)
+
+	// Parse sentiment values
+	upPercentage := fmt.Sprintf("%.2f%%", m.coinDetails.SentimentVotesUpPercentage)
+	downPercentage := fmt.Sprintf("%.2f%%", m.coinDetails.SentimentVotesDownPercentage)
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Foreground(subtextColor).Render(fmt.Sprintf("%s (%s)", m.coinDetails.Name, strings.ToUpper(m.coinDetails.Symbol))),
+		"", // new line
+		fmt.Sprintf("• $%s", priceFormatted),
+		fmt.Sprintf(
+			"• Sentiment: %s ↑ %s ↓",
+			lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render(upPercentage),   // green
+			lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Render(downPercentage), // red
+		),
+		fmt.Sprintf(
+			"• Learn More ↗: %s",
+			lipgloss.NewStyle().Foreground(subtleColor).Render(m.coinDetails.Links.Whitepaper),
+		),
+		"", // new line
+		lipgloss.NewStyle().Foreground(subtleColor).Render("(press esc to go back)"),
 	)
 }
 
@@ -392,12 +408,14 @@ func checkboxPicker(options []string, choice int) string {
 
 // Creates and initializes the application model with default values
 func initialModel() model {
+	// Initialize the text input for cryptocurrency search
 	ti := textinput.New()
 	ti.Placeholder = "Search for a cryptocurrency"
 	ti.Focus()
 	ti.CharLimit = 156
 	ti.Width = 30
 
+	// Initialize the list to display search results
 	ls := list.New([]list.Item{}, list.NewDefaultDelegate(), 30, 20)
 	ls.Title = "Search Results"
 
@@ -406,8 +424,8 @@ func initialModel() model {
 		keys:      keys,                      // initialize key bindings
 		help:      help.New(),                // initialize help model
 		table:     InitializeTrendingTable(), // set up the trending data table
-		textInput: ti,
-		list:      ls,
+		textInput: ti,                        // text input for search
+		list:      ls,                        // list for displaying search results
 	}
 }
 
