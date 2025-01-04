@@ -1,13 +1,15 @@
-// main.go
 package main
 
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucasb-eyer/go-colorful"
@@ -20,16 +22,23 @@ type ViewMode int
 const (
 	MenuView     ViewMode = iota // main menu view
 	TrendingView                 // view displaying trending data
+	SearchView                   // view for searching cryptocurrencies
+	ViewingList                  // view for displaying search results
+	ViewingInfo                  // view for displaying detailed coin information
 )
 
 // The main application model holds the state of the program
 type model struct {
-	viewMode   ViewMode    // current view mode
-	menuChoice int         // selected option in the menu
-	keys       keyMap      // key bindings
-	help       help.Model  // help menu model
-	table      table.Model // table to display data
-	err        error       // error tracking for data operations
+	viewMode    ViewMode    // current view mode
+	menuChoice  int         // selected option in the menu
+	keys        keyMap      // key bindings
+	help        help.Model  // help menu model
+	table       table.Model // table to display data
+	err         error       // error tracking for data operations
+	textInput   textinput.Model
+	list        list.Model
+	selected    Coin
+	coinDetails CoinDetails
 }
 
 // Color definitions for gradients and UI elements
@@ -42,6 +51,7 @@ var (
 	baseStyle        = lipgloss.NewStyle().      // base style for table rendering
 				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(lipgloss.Color("240"))
+	docStyle = lipgloss.NewStyle().Margin(1, 2) // style for the list view
 )
 
 // keyMap defines bindings for user input and their associated actions
@@ -97,7 +107,7 @@ var keys = keyMap{
 
 // Initialization method for the model; no initial commands are required
 func (m model) Init() tea.Cmd {
-	return nil
+	return textinput.Blink
 }
 
 // Update handles user input and updates the program's state accordingly
@@ -121,6 +131,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateMenu(msg) // update logic for the menu view
 		case TrendingView:
 			return m.updateTrending(msg) // update logic for the trending view
+		case SearchView:
+			return m.updateSearch(msg) // update logic for the search view
+		case ViewingList:
+			return m.updateViewingList(msg) // update logic for the viewing list view
+		case ViewingInfo:
+			return m.updateViewingInfo(msg) // update logic for the viewing info view
 		}
 	case errMsg:
 		// Handle errors and update the model's error field
@@ -154,6 +170,9 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.menuChoice == 0 {
 			m.viewMode = TrendingView
 			return m, fetchTrendingCmd
+		} else if m.menuChoice == 1 {
+			m.viewMode = SearchView
+			return m, nil
 		}
 	case key.Matches(msg, m.keys.Help):
 		// Toggle help menu visibility
@@ -178,6 +197,57 @@ func (m model) updateTrending(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// Logic for updating the search view
+func (m model) updateSearch(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		query := m.textInput.Value()
+		items, err := fetchCoins(query)
+		if err != nil {
+			m.err = err
+			return m, nil
+		}
+		m.list.SetItems(items)
+		m.viewMode = ViewingList
+	case "esc":
+		m.viewMode = MenuView
+	}
+
+	var cmd tea.Cmd
+	m.textInput, cmd = m.textInput.Update(msg)
+	return m, cmd
+}
+
+// Logic for updating the viewing list view
+func (m model) updateViewingList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		selectedItem := m.list.SelectedItem().(item)
+		m.selected = selectedItem.data
+		coinDetails, err := fetchCoinDetails(m.selected.ID)
+		if err != nil {
+			m.err = err
+			return m, nil
+		}
+		m.coinDetails = coinDetails
+		m.viewMode = ViewingInfo
+	case "esc":
+		m.viewMode = SearchView
+	}
+
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
+}
+
+// Logic for updating the viewing info view
+func (m model) updateViewingInfo(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "esc" {
+		m.viewMode = ViewingList
+	}
+	return m, nil
+}
+
 // View method to render the appropriate screen based on viewMode
 func (m model) View() string {
 	switch m.viewMode {
@@ -185,6 +255,12 @@ func (m model) View() string {
 		return m.menuView() // render menu view
 	case TrendingView:
 		return m.trendingView() // render trending view
+	case SearchView:
+		return m.searchView() // render search view
+	case ViewingList:
+		return m.viewingListView() // render viewing list view
+	case ViewingInfo:
+		return m.viewingInfoView() // render viewing info view
 	default:
 		return "Unknown view" // handle unexpected states
 	}
@@ -231,6 +307,34 @@ func (m model) trendingView() string {
 		baseStyle.Render(m.table.View()),
 		"", // new line
 		helpView,
+	)
+}
+
+// Search view rendering logic
+func (m model) searchView() string {
+	return fmt.Sprintf(
+		"Search for a cryptocurrency:\n\n%s\n\n%s",
+		m.textInput.View(),
+		"(Press Enter to search, Esc to quit)",
+	)
+}
+
+// Viewing list view rendering logic
+func (m model) viewingListView() string {
+	return docStyle.Render(m.list.View())
+}
+
+// Viewing info view rendering logic
+func (m model) viewingInfoView() string {
+	price := m.coinDetails.MarketData.CurrentPrice["usd"]
+	return fmt.Sprintf(
+		"%s (%s)\n\n• $%.2f\n• Sentiment: %.2f%% ↑ | %.2f%% ↓\n• Learn More ↗: %s\n\n(Press Esc to go back)",
+		m.coinDetails.Name,
+		strings.ToUpper(m.coinDetails.Symbol),
+		price,
+		m.coinDetails.SentimentVotesUpPercentage,
+		m.coinDetails.SentimentVotesDownPercentage,
+		m.coinDetails.Links.Whitepaper,
 	)
 }
 
@@ -288,11 +392,22 @@ func checkboxPicker(options []string, choice int) string {
 
 // Creates and initializes the application model with default values
 func initialModel() model {
+	ti := textinput.New()
+	ti.Placeholder = "Search for a cryptocurrency"
+	ti.Focus()
+	ti.CharLimit = 156
+	ti.Width = 30
+
+	ls := list.New([]list.Item{}, list.NewDefaultDelegate(), 30, 20)
+	ls.Title = "Search Results"
+
 	return model{
-		viewMode: MenuView,                  // start in the menu view
-		keys:     keys,                      // initialize key bindings
-		help:     help.New(),                // initialize help model
-		table:    InitializeTrendingTable(), // set up the trending data table
+		viewMode:  MenuView,                  // start in the menu view
+		keys:      keys,                      // initialize key bindings
+		help:      help.New(),                // initialize help model
+		table:     InitializeTrendingTable(), // set up the trending data table
+		textInput: ti,
+		list:      ls,
 	}
 }
 
